@@ -3,10 +3,13 @@
 # crm_to_skebby.rb
 # This script processes a CSV file exported from ZohoCRM and makes it suitable
 # to import in Skebby.
-#
+# ZohoCRM exports a comma separated CSV  with a lot of columns. Skebby wants
+# a semicolumn separated CSV. Also, the coumn names differ from ZohoCRM
+# and Skebby. We want to use ony some columns from ZohoCRM and translate them
+# in the Skebby format.
 
-# Sets variables equal to ZohoCRM exported CSV file. We only use the columns we
-# need.
+# Sets variables equal to ZohoCRM exported CSV column names.
+# We only use the columns we need.
 NAME_HEADER = 'Nome'.freeze
 SURNAME_HEADER = 'Cognome'.freeze
 PHONE_HEADER = 'Cellulare'.freeze
@@ -18,12 +21,13 @@ class SkebbyFile < File
   def initialize(filename, mode)
     super(filename, mode)
     # Every time we create a ne file, we insert
-    # the CSV header in the Skebby format
+    # the CSV header in the Skebby format.
+    # Again we only use the columns we need.
     puts 'nome;cognome;email;numero di cellulare'
   end
 end
 
-# Adds a little utility to the String class to chomp on the right
+# Adds a little module utility to the String class to chomp on the right
 module StringUtils
   def rchomp(sep = $RS)
     start_with?(sep) ? self[sep.size..-1] : self
