@@ -45,7 +45,8 @@ lead_col = crm_header.index(LEAD_HEADER)
 
 crm_csv.each_line do |line|
   row = line.split(',')
-  lead = row[lead_col].rchomp('"').chomp('"').gsub(/\s+/, '_')
+  lead = row[lead_col].rchomp('"').chomp('"')
+  lead.gsub!(/\s+/, '_')
   skebby_files[lead] ||= SkebbyFile.new(lead + '.csv', 'w')
   skebby_files[lead].puts "#{row[name_col]};#{row[surname_col]};" \
     "#{row[email_col]};#{row[phone_col]}"
