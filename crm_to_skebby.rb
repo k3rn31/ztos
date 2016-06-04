@@ -24,7 +24,7 @@ class SkebbyFile < File
 end
 
 # Adds a little utility to the String class to chomp on the right
-class String
+module StringUtils
   def rchomp(sep = $RS)
     start_with?(sep) ? self[sep.size..-1] : self
   end
@@ -45,6 +45,7 @@ lead_col = crm_header.index(LEAD_HEADER)
 
 crm_csv.each_line do |line|
   row = line.split(',')
+  row[lead_col].extend(StringUtils)
   lead = row[lead_col].rchomp('"').chomp('"')
   lead.gsub!(/\s+/, '_')
   skebby_files[lead] ||= SkebbyFile.new(lead + '.csv', 'w')
