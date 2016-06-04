@@ -59,6 +59,4 @@ end
 
 # Closing files
 crm_csv.close
-skebby_files.each do |_k, v|
-  v.close
-end
+skebby_files.each { |_k, v| v.close }
