@@ -21,6 +21,7 @@
 
 require 'yaml'
 require 'net/http'
+require 'English'
 
 # Primary configuration class
 class ZtosConfig
@@ -63,30 +64,36 @@ class ZtosConfig
 
   def generate_zoho_token
     puts 'Can\'t find a valid ZohoCRM authtoken. Obtaining new one.'
+    login = { username: nil, password: nil }
+    error_responses = %w(INVALID_PASSWORD
+                         NO_SUCH_USER
+                         EXCEEDED_MAXIMUM_ALLOWED_AUTHTOKENS)
+    until @config[:zoho_token]
+      new_user_credentials(login)
+      uri = generate_uri(login)
+      response = Net::HTTP.get_response(uri).body.split($RS)[2].split('=')
+      next if !(response & error_responses).empty?
+      @config[:zoho_token] = response[1]
+    end
+    save_config
+  end
+
+  def new_user_credentials(login)
     print 'Enter ZohoCRM username: '
-    username = gets.chomp
+    login[:username] = gets.chomp
     print 'Enter ZohoCRM password: '
-    password = gets.chomp
+    login[:password] = gets.chomp
+  end
 
+  def generate_uri(login)
     uri = URI('https://accounts.zoho.com/apiauthtoken/nb/create')
-
     params = {
       SCOPE: 'ZohoCRM/crmapi',
-      EMAIL_ID: username,
-      PASSWORD: password,
+      EMAIL_ID: login[:username],
+      PASSWORD: login[:password],
       DISPLAY_NAME: 'ZohoCRMtoSkebby'
     }
-
     uri.query = URI.encode_www_form(params)
-
-    response = Net::HTTP.get_response(uri)
-
-    token = response.body.split($RS).select { |v| v =~ /^AUTHTOKEN=/ }
-    token = token.to_s
-    token.delete!('["AUTHTOKEN=').delete!('"]')
-
-    @config[:zoho_token] = token
-
-    save_config
+    uri
   end
 end
