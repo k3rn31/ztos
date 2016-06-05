@@ -27,9 +27,9 @@ Gem::Specification.new do |s|
   s.description = 'A simple converter from ZohoCRM ro Skebby'
   s.authors     = ['Davide Petilli']
   s.email       = 'davide@petilli.it'
+  s.license     = 'MIT'
   s.files       = ['lib/ztos.rb',
                    'lib/ztos/skebby_file.rb',
                    'lib/ztos/string_utils.rb']
   s.executables << 'ztos'
-  s.license     = 'MIT'
 end
