@@ -1,20 +1,22 @@
 #!/usr/bin/env ruby
 
-# crm_to_skebby.rb
-# This script processes a CSV file exported from ZohoCRM and makes it suitable
-# to import in Skebby.
-# ZohoCRM exports a comma separated CSV  with a lot of columns. Skebby wants
-# a semicolumn separated CSV. Also, the coumn names differ from ZohoCRM
-# and Skebby. We want to use ony some columns from ZohoCRM and translate them
-# in the Skebby format.
+# zohocrm_to_skebby.rb
+# This script retrieves the contacts form ZohoCRM using the API and generates
+# multiple CSV files in the format that Skebby likes.
+# The script gets the ZohoCRM authorization token from an environment variable,
+# then it retrieves a JSON list of clients, and converts it in a Hash.
+# Last, it converts it to multiple CSV files, one for each 'Lead Source'.
 
-# Sets variables equal to ZohoCRM exported CSV column names.
-# We only use the columns we need.
-NAME_HEADER = 'Nome'.freeze
-SURNAME_HEADER = 'Cognome'.freeze
-PHONE_HEADER = 'Cellulare'.freeze
-EMAIL_HEADER = 'E-mail'.freeze
-LEAD_HEADER = '"Origine Lead"'.freeze
+require 'net/http'
+require 'json'
+
+if ENV['ZOHO_TOKEN']
+  ZOHO_TOKEN = ENV['ZOHO_TOKEN'].freeze
+else
+  STDERR.puts 'The ZOHO_TOKEN environmet variable isn\'t set. ' \
+    'Please, get a valid token.'
+  exit
+end
 
 # The class defining the CSV to import on Skebby
 class SkebbyFile < File
@@ -27,36 +29,79 @@ class SkebbyFile < File
   end
 end
 
-# Adds a little module utility to the String class to chomp on the right
+# Adds a little module utility to the String class to chomp on the right and
+# tokenize strings
 module StringUtils
   def rchomp(sep = $RS)
     start_with?(sep) ? self[sep.size..-1] : self
   end
+
+  def tokenify
+    rchomp('"').chomp('"')
+    gsub!(/\s+/, '_')
+  end
 end
 
-abort('I need a valid file name.') if ARGV.empty? || !File.file?(ARGV[0])
-
+crm_cli = []
 skebby_files = {}
-crm_csv = File.new(ARGV[0], 'r')
 
-crm_header = crm_csv.gets.split(',')
+# The ZohoCRM API limits max requests to 200, so we get records 200 at a time
+from_index = 1
+to_index = 200
 
-name_col = crm_header.index(NAME_HEADER)
-surname_col = crm_header.index(SURNAME_HEADER)
-phone_col = crm_header.index(PHONE_HEADER)
-email_col = crm_header.index(EMAIL_HEADER)
-lead_col = crm_header.index(LEAD_HEADER)
+uri = URI('https://crm.zoho.com/crm/private/json/Contacts/getRecords')
 
-crm_csv.each_line do |line|
-  row = line.split(',')
-  row[lead_col].extend(StringUtils)
-  lead = row[lead_col].rchomp('"').chomp('"')
-  lead.gsub!(/\s+/, '_')
-  skebby_files[lead] ||= SkebbyFile.new(lead + '.csv', 'w')
-  skebby_files[lead].puts "#{row[name_col]};#{row[surname_col]};" \
-    "#{row[email_col]};#{row[phone_col]}"
+print 'Getting data from ZohoCRM'
+loop do
+  print '.'
+  params = {
+    newFormat: 2,
+    authtoken: ZOHO_TOKEN,
+    scope: 'crmapi',
+    fromIndex: from_index,
+    toIndex: to_index,
+    selectColumns: 'Contacts(Lead Source,First Name,Last Name,Email,Mobile)'
+  }
+
+  uri.query = URI.encode_www_form(params)
+
+  response = Net::HTTP.get_response(uri)
+
+  if response.is_a?(Net::HTTPSuccess)
+    parsed_json = JSON.parse(response.body, symbolize_names: true)
+    from_index += 200
+    to_index += 200
+  end
+
+  break if parsed_json[:response][:nodata]
+
+  parsed_json[:response][:result][:Contacts][:row].each do |row|
+    h = {}
+    row[:FL].each do |p|
+      key = p[:val].extend(StringUtils)
+      key.tokenify
+      h[key.to_sym] = p[:content]
+    end
+    crm_cli << h
+  end
 end
+print "\n"
+
+print 'Composing records'
+crm_cli.each do |cli|
+  print '.'
+  lead = cli[:Lead_Source]
+  lead.extend(StringUtils)
+  lead.tokenify
+  skebby_files[lead] ||= SkebbyFile.new(lead + '.csv', 'w')
+  skebby_files[lead].puts "#{cli[:First_Name]};#{cli[:Last_Name]};" \
+    "#{cli[:Email]};#{cli[:Mobile]}"
+end
+print "\n"
 
 # Closing files
-crm_csv.close
-skebby_files.each { |_k, v| v.close }
+puts 'Files generated:'
+skebby_files.each do |_k, v|
+  puts "\t" + File.basename(v)
+  v.close
+end
