@@ -3,8 +3,8 @@ image: "ruby:2.3.1"
 before_script:
   - ruby -v
   - which ruby
-  - retry gem install bundler --no-ri --no-rdoc
-  - retry bundle install --jobs $(nproc) "${FLAGS[@]}"
+  - gem install bundler --no-ri --no-rdoc
+  - bundle install --jobs $(nproc) "${FLAGS[@]}"
 
 rspec:
   script:
