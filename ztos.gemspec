@@ -30,6 +30,7 @@ Gem::Specification.new do |s|
   s.license     = 'MIT'
   s.files       = ['lib/ztos.rb',
                    'lib/ztos/skebby_file.rb',
-                   'lib/ztos/string_utils.rb']
+                   'lib/ztos/string_utils.rb',
+                   'lib/ztos/ztos_config.rb']
   s.executables << 'ztos'
 end
