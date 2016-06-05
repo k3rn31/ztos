@@ -72,7 +72,7 @@ class ZtosConfig
       new_user_credentials(login)
       uri = generate_uri(login)
       response = Net::HTTP.get_response(uri).body.split($RS)[2].split('=')
-      next if !(response & error_responses).empty?
+      next unless (response & error_responses).empty?
       @config[:zoho_token] = response[1]
     end
     save_config
