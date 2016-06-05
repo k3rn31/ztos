@@ -2,6 +2,7 @@ before_script:
   - ruby -v
   - which ruby
   - gem install bundler --no-ri --no-rdoc
+  - bundler install
 
 rspec:
   script:
