@@ -31,14 +31,9 @@ require 'json'
 
 require 'ztos/skebby_file'
 require 'ztos/string_utils'
+require 'ztos/ztos_config'
 
-if ENV['ZOHO_TOKEN']
-  ZOHO_TOKEN = ENV['ZOHO_TOKEN'].freeze
-else
-  STDERR.puts 'The ZOHO_TOKEN environmet variable isn\'t set. ' \
-    'Please, get a valid token.'
-  exit
-end
+config = ZtosConfig.new
 
 crm_cli = []
 skebby_files = {}
@@ -54,7 +49,7 @@ loop do
   print '.'
   params = {
     newFormat: 2,
-    authtoken: ZOHO_TOKEN,
+    authtoken: config.zoho_token,
     scope: 'crmapi',
     fromIndex: from_index,
     toIndex: to_index,
