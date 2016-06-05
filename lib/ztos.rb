@@ -29,36 +29,15 @@
 require 'net/http'
 require 'json'
 
+require 'ztos/skebby_file'
+require 'ztos/string_utils'
+
 if ENV['ZOHO_TOKEN']
   ZOHO_TOKEN = ENV['ZOHO_TOKEN'].freeze
 else
   STDERR.puts 'The ZOHO_TOKEN environmet variable isn\'t set. ' \
     'Please, get a valid token.'
   exit
-end
-
-# The class defining the CSV to import on Skebby
-class SkebbyFile < File
-  def initialize(filename, mode)
-    super(filename, mode)
-    # Every time we create a ne file, we insert
-    # the CSV header in the Skebby format.
-    # Again we only use the columns we need.
-    puts 'nome;cognome;email;numero di cellulare'
-  end
-end
-
-# Adds a little module utility to the String class to chomp on the right and
-# tokenize strings
-module StringUtils
-  def rchomp(sep = $RS)
-    start_with?(sep) ? self[sep.size..-1] : self
-  end
-
-  def tokenify
-    rchomp('"').chomp('"')
-    gsub!(/\s+/, '_')
-  end
 end
 
 crm_cli = []
