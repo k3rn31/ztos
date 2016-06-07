@@ -28,18 +28,13 @@
 
 # Adds a little module utility to the String class
 module StringUtils
-  # Adds a little module utility to the String class to chomp on the right and
-  # tokenize strings
-  #
-  # Arguments:
-  #   sep: (string)
-
-  def rchomp(sep = $RS)
-    start_with?(sep) ? self[sep.size..-1] : self
+  def tokenify
+    delete('"').gsub(/\s+/, '_').downcase
   end
 
-  def tokenify
-    rchomp('"').chomp('"')
+  def tokenify!
+    delete!('"')
     gsub!(/\s+/, '_')
+    downcase!
   end
 end
