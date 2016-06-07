@@ -30,11 +30,11 @@ require 'net/http'
 require 'json'
 require 'English'
 
-require 'ztos/skebby_file'
+require 'ztos/skebby/skebby_file'
 require 'ztos/string_utils'
 require 'ztos/ztos_config'
 
-config = ZtosConfig.new
+config = Ztos::Configuration.new
 
 crm_cli = []
 skebby_files = {}
@@ -73,7 +73,7 @@ loop do
     h = {}
     row[:FL].each do |p|
       key = p[:val].extend(StringUtils)
-      key.tokenify
+      key.tokenify!
       h[key.to_sym] = p[:content]
     end
     crm_cli << h
@@ -84,12 +84,12 @@ print "\n"
 print 'Composing records'
 crm_cli.each do |cli|
   print '.'
-  lead = cli[:Lead_Source]
+  lead = cli[:lead_source]
   lead.extend(StringUtils)
-  lead.tokenify
-  skebby_files[lead] ||= SkebbyFile.new(lead + '.csv', 'w')
-  skebby_files[lead].puts "#{cli[:First_Name]};#{cli[:Last_Name]};" \
-    "#{cli[:Email]};#{cli[:Mobile]}"
+  lead.tokenify!
+  skebby_files[lead] ||= Skebby::SkebbyFile.new(lead + '.csv', 'w')
+  skebby_files[lead].puts "#{cli[:first_name]};#{cli[:last_name]};" \
+    "#{cli[:email]};#{cli[:mobile]}"
 end
 print "\n"
 

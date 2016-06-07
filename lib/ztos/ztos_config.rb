@@ -23,77 +23,47 @@ require 'yaml'
 require 'net/http'
 require 'English'
 
-# Primary configuration class
-class ZtosConfig
-  # This class loads configuration parameters from a configuration file
-  # or from environment variables.
-  # When it can't find them, it queries ZohoCRM for a new token.
+require 'ztos/zoho/zoho_talker'
 
-  def initialize
-    @config = { zoho_token: nil, zoho_last_access: nil }
-    @config_file = File.expand_path('~/.ztos')
-    if File.file?(@config_file)
-      File.open(@config_file) { |f| @config = YAML.load(f).to_h }
-    elsif ENV['ZOHO_TOKEN']
-      token_from_env
-    else
-      generate_zoho_token
+module Ztos
+  # Primary configuration class
+  class Configuration
+    # This class loads configuration parameters from a configuration file
+    # or from environment variables.
+    # When it can't find them, it queries ZohoCRM for a new token.
+
+    def initialize
+      @config = { zoho_token: nil, zoho_last_access: nil }
+      @config_file = File.expand_path('~/.ztos')
+      if File.file?(@config_file)
+        File.open(@config_file) { |file| @config = YAML.load(file).to_h }
+      # elsif ENV['ZOHO_TOKEN']
+      #   token_from_env
+      else
+        @config[:zoho_token] = Zoho::Talker.obtain_new_token
+        save_config
+      end
     end
-  end
 
-  def zoho_token
-    @config[:zoho_token]
-  end
-
-  def zoho_last_access
-    @config[:zoho_last_access]
-  end
-
-  def save_config
-    f = File.new(@config_file, 'w')
-    f.puts @config.to_yaml
-    f.close
-  end
-
-  private
-
-  def token_from_env
-    puts 'Using ZOHO_TOKEN environment variable.'
-    @config[:zoho_token] = ENV['ZOHO_TOKEN']
-  end
-
-  def generate_zoho_token
-    puts 'Can\'t find a valid ZohoCRM authtoken. Obtaining new one.'
-    login = { username: nil, password: nil }
-    error_responses = %w(INVALID_PASSWORD
-                         NO_SUCH_USER
-                         EXCEEDED_MAXIMUM_ALLOWED_AUTHTOKENS)
-    until @config[:zoho_token]
-      new_user_credentials(login)
-      uri = generate_uri(login)
-      response = Net::HTTP.get_response(uri).body.split($RS)[2].split('=')
-      next unless (response & error_responses).empty?
-      @config[:zoho_token] = response[1]
+    def zoho_token
+      @config[:zoho_token]
     end
-    save_config
-  end
 
-  def new_user_credentials(login)
-    print 'Enter ZohoCRM username: '
-    login[:username] = gets.chomp
-    print 'Enter ZohoCRM password: '
-    login[:password] = gets.chomp
-  end
+    def zoho_last_access
+      @config[:zoho_last_access]
+    end
 
-  def generate_uri(login)
-    uri = URI('https://accounts.zoho.com/apiauthtoken/nb/create')
-    params = {
-      SCOPE: 'ZohoCRM/crmapi',
-      EMAIL_ID: login[:username],
-      PASSWORD: login[:password],
-      DISPLAY_NAME: 'ZohoCRMtoSkebby'
-    }
-    uri.query = URI.encode_www_form(params)
-    uri
+    def save_config
+      file = File.new(@config_file, 'w')
+      file.puts @config.to_yaml
+      file.close
+    end
+
+    private
+
+    def token_from_env
+      puts 'Using ZOHO_TOKEN environment variable.'
+      @config[:zoho_token] = ENV['ZOHO_TOKEN']
+    end
   end
 end
