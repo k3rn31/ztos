@@ -30,11 +30,11 @@ require 'net/http'
 require 'json'
 require 'English'
 
-require 'ztos/skebby_file'
+require 'ztos/skebby/skebby_file'
 require 'ztos/string_utils'
 require 'ztos/ztos_config'
 
-config = ZtosConfig.new
+config = Ztos::Configuration.new
 
 crm_cli = []
 skebby_files = {}
