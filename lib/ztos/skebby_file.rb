@@ -19,19 +19,21 @@
 # TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
 # OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-# The class defining the CSV to import on Skebby
-class SkebbyFile < File
-  # Creates a file that when initializes, adds a header.
-  #
-  # Arguments:
-  #   filename: (String)
-  #   mode: (String)
+module Skebby
+  # The class defining the CSV to import on Skebby
+  class SkebbyFile < File
+    # Creates a file that when initializes, adds a header.
+    #
+    # Arguments:
+    #   filename: (String)
+    #   mode: (String)
 
-  def initialize(filename, mode)
-    super(filename, mode)
-    # Every time we create a ne file, we insert
-    # the CSV header in the Skebby format.
-    # Again we only use the columns we need.
-    puts 'nome;cognome;email;numero di cellulare'
+    def initialize(filename, mode)
+      super(filename, mode)
+      # Every time we create a ne file, we insert
+      # the CSV header in the Skebby format.
+      # Again we only use the columns we need.
+      puts 'nome;cognome;email;numero di cellulare'
+    end
   end
 end
