@@ -19,13 +19,6 @@
 # TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
 # OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-# ztos.rb
-# This script retrieves the contacts form ZohoCRM using the API and generates
-# multiple CSV files in the format that Skebby likes.
-# The script gets the ZohoCRM authorization token from an environment variable,
-# then it retrieves a JSON list of clients, and converts it in a Hash.
-# Last, it converts it to multiple CSV files, one for each 'Lead Source'.
-
 # Adds a little module utility to the String class
 module StringUtils
   def tokenify
