@@ -26,8 +26,6 @@ module StringUtils
   end
 
   def tokenify!
-    delete!('"')
-    gsub!(/\s+/, '_')
-    downcase!
+    replace(tokenify)
   end
 end
