@@ -40,7 +40,7 @@ module Ztos
       # elsif ENV['ZOHO_TOKEN']
       #   token_from_env
       else
-        @config[:zoho_token] = Zoho::Talker.obtain_new_token
+        @config[:zoho_token] = ZohoTalker.obtain_new_token
         save_config
       end
     end
