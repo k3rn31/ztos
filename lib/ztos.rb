@@ -87,7 +87,7 @@ crm_cli.each do |cli|
   lead = cli[:lead_source]
   lead.extend(StringUtils)
   lead.tokenify!
-  skebby_files[lead] ||= Skebby::SkebbyFile.new(lead + '.csv', 'w')
+  skebby_files[lead] ||= SkebbyTalker::File.new(lead + '.csv', 'w')
   skebby_files[lead].puts "#{cli[:first_name]};#{cli[:last_name]};" \
     "#{cli[:email]};#{cli[:mobile]}"
 end

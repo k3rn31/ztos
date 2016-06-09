@@ -19,9 +19,9 @@
 # TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
 # OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-module Skebby
+module SkebbyTalker
   # The class defining the CSV to import on Skebby
-  class SkebbyFile < File
+  class File < File
     # Creates a file that when initializes, adds a header.
     #
     # Arguments:
