@@ -58,10 +58,8 @@ module ZohoTalker
     private
 
     def response_from_uri(uri, params)
-      p params
       uri = URI(uri)
       uri.query = URI.encode_www_form(params)
-      p uri
       Net::HTTP.get_response(uri)
     end
 
@@ -94,9 +92,7 @@ module ZohoTalker
           EMAIL_ID: @credentials[:username], PASSWORD: @credentials[:password]
         }
         response = response_from_uri(@interface[:get_token], params)
-        p response.body
         response = response.body.split($RS)[2].split('=')
-        p response
         next unless (response & ERROR_RESPONSES).empty?
         token = response[1]
       end
