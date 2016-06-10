@@ -32,14 +32,19 @@ require 'json'
 require 'ztos/skebby/skebby_file'
 require 'ztos/string_utils'
 require 'ztos/ztos_config'
+require 'ztos/ztos_logger'
 
 module Ztos
   # The main class responsible of running the main task
   class Recorder
-    def initialize(config)
-      @config = config
+    def initialize
+      @config = Configuration.new
+      @logger = Logger.new
       @crm_cli = []
       @skebby_files = {}
+
+      retrieve_data_from_zoho
+      compose_records
     end
 
     def retrieve_data_from_zoho
@@ -50,64 +55,66 @@ module Ztos
 
       uri = URI('https://crm.zoho.com/crm/private/json/Contacts/getRecords')
 
-      print 'Getting data from ZohoCRM'
-      loop do
-        print '.'
-        params = {
-          newFormat: 2,
-          authtoken: @config.zoho_token,
-          scope: 'crmapi',
-          fromIndex: from_index,
-          toIndex: to_index,
-          selectColumns: 'Contacts(Lead Source,First Name,Last Name,Email,Mobile)'
-        }
+      @logger.do_with_log 'Getting data from ZohoCRM' do
+        loop do
+          print '.'
+          params = {
+            newFormat: 2,
+            authtoken: @config.zoho_token,
+            scope: 'crmapi',
+            fromIndex: from_index,
+            toIndex: to_index,
+            selectColumns: 'Contacts(Lead Source,First Name,Last Name,Email,Mobile)'
+          }
 
-        uri.query = URI.encode_www_form(params)
+          uri.query = URI.encode_www_form(params)
 
-        response = Net::HTTP.get_response(uri)
+          response = Net::HTTP.get_response(uri)
 
-        if response.is_a?(Net::HTTPSuccess)
-          parsed_json = JSON.parse(response.body, symbolize_names: true)
-          from_index += 200
-          to_index += 200
-        end
-
-        break if parsed_json[:response][:nodata]
-
-        parsed_json[:response][:result][:Contacts][:row].each do |row|
-          h = {}
-          row[:FL].each do |p|
-            key = p[:val].extend(StringUtils)
-            key.tokenify!
-            h[key.to_sym] = p[:content]
+          if response.is_a?(Net::HTTPSuccess)
+            parsed_json = JSON.parse(response.body, symbolize_names: true)
+            from_index += 200
+            to_index += 200
           end
-          @crm_cli << h
+
+          break if parsed_json[:response][:nodata]
+
+          parsed_json[:response][:result][:Contacts][:row].each do |row|
+            h = {}
+            row[:FL].each do |p|
+              key = p[:val].extend(StringUtils)
+              key.tokenify!
+              h[key.to_sym] = p[:content]
+            end
+            @crm_cli << h
+          end
         end
       end
-      print "\n"
     end
 
     def compose_records
-      print 'Composing records'
-      @crm_cli.each do |cli|
-        print '.'
-        lead = cli[:lead_source]
-        lead.extend(StringUtils)
-        lead.tokenify!
-        @skebby_files[lead] ||= SkebbyTalker::File.new(lead + '.csv', 'w')
-        @skebby_files[lead].puts "#{cli[:first_name]};#{cli[:last_name]};" \
-          "#{cli[:email]};#{cli[:mobile]}"
+      @logger.do_with_log 'Composing records' do
+        @crm_cli.each do |cli|
+          @logger.do_with_log_in_place '.' do
+            lead = cli[:lead_source]
+            lead.extend(StringUtils)
+            lead.tokenify!
+            @skebby_files[lead] ||= SkebbyTalker::File.new(lead + '.csv', 'w')
+            @skebby_files[lead].puts "#{cli[:first_name]};#{cli[:last_name]};" \
+              "#{cli[:email]};#{cli[:mobile]}"
+          end
+        end
       end
-      print "\n"
       close_skebby_files
     end
 
     def close_skebby_files
       # Closing files
-      puts 'Files generated:'
-      @skebby_files.each do |_k, v|
-        puts "\t" + File.basename(v)
-        v.close
+      @logger.do_with_log "Files generated:\n" do
+        @skebby_files.each do |_k, v|
+          puts "\t" + File.basename(v)
+          v.close
+        end
       end
     end
   end

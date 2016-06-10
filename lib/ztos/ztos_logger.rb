@@ -1,5 +1,3 @@
-#!/usr/bin/env ruby
-
 # The MIT License (MIT)
 # Copyright (c) 2016 Davide Petilli
 #
@@ -21,6 +19,18 @@
 # TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
 # OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-require 'ztos'
+module Ztos
+  # Class responsible for adding log messages
+  class Logger
+    def do_with_log(message)
+      print message
+      yield
+      print "\n"
+    end
 
-Ztos::Recorder.new
+    def do_with_log_in_place(message)
+      print message
+      yield
+    end
+  end
+end
