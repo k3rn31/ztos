@@ -77,17 +77,20 @@ module Ztos
     def compose_records
       @logger.do_with_log 'Composing records' do
         @crm_cli.each do |cli|
-          @logger.do_with_log_in_place '.' do
-            lead = cli[:lead_source]
-            lead.extend(StringUtils)
-            lead.tokenify!
-            @skebby_files[lead] ||= SkebbyTalker::File.new(lead + '.csv', 'w')
-            @skebby_files[lead].puts "#{cli[:first_name]};#{cli[:last_name]};" \
-              "#{cli[:email]};#{cli[:mobile]}"
-          end
+          print '.'
+          lead = switch_lead(cli)
+          @skebby_files[lead] ||= SkebbyTalker::File.new(lead + '.csv', 'w')
+          @skebby_files[lead].puts "#{cli[:first_name]};#{cli[:last_name]};" \
+            "#{cli[:email]};#{cli[:mobile]}"
         end
       end
       close_skebby_files
+    end
+
+    def switch_lead(cli)
+      lead = cli[:lead_source]
+      lead.extend(StringUtils)
+      lead.tokenify!
     end
 
     def close_skebby_files
