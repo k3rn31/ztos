@@ -98,8 +98,7 @@ module ZohoTalker
         }
         response = response_from_uri(@interface[:get_token], params)
         response = parse_token_response(response)
-        next unless zoho_without_errors?(response)
-        return response[1]
+        zoho_without_errors?(response) ? response[1] : next
       end
     end
 
