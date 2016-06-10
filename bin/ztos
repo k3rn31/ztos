@@ -22,3 +22,9 @@
 # OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 require 'ztos'
+
+config = Ztos::Configuration.new
+recorder = Ztos::Recorder.new(config)
+
+recorder.retrieve_data_from_zoho
+recorder.compose_records
