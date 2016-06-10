@@ -21,14 +21,14 @@
 
 # Module hosting Zoho communication methods
 module ZohoTalker
-  ERROR_RESPONSES = %w(INVALID_PASSWORD
-                       NO_SUCH_USER
-                       EXCEEDED_MAXIMUM_ALLOWED_AUTHTOKENS null).freeze
-
   @interface = {
     get_contacts: 'https://crm.zoho.com/crm/private/json/Contacts/getRecords',
     get_token: 'https://accounts.zoho.com/apiauthtoken/nb/create'
   }
+
+  ERROR_RESPONSES = %w(INVALID_PASSWORD
+                       NO_SUCH_USER
+                       EXCEEDED_MAXIMUM_ALLOWED_AUTHTOKENS).freeze
 
   # The ZohoCRM API limits max requests to 200,
   # so we get records 200 at a time
@@ -40,7 +40,12 @@ module ZohoTalker
   class << self
     def obtain_new_token
       puts 'Can\'t find a valid ZohoCRM authtoken. Obtaining new one.'
-      ask_for_token
+      begin
+        ask_for_token
+      rescue Interrupt
+        puts "\nExiting..."
+        exit
+      end
     end
 
     def ask_zoho_for_data(zoho_token)
@@ -50,8 +55,8 @@ module ZohoTalker
         selectColumns: 'Contacts(Lead Source,First Name,Last Name,Email,Mobile)'
       }
       response = response_from_uri(@interface[:get_contacts], params)
-      increment_indexes if response.is_a?(Net::HTTPSuccess)
       response = nil unless response.is_a?(Net::HTTPSuccess)
+      increment_indexes
       response.body
     end
 
@@ -69,6 +74,7 @@ module ZohoTalker
     end
 
     def new_username
+      # TODO: Add some control for the input
       print 'Enter ZohoCRM username: '
       @credentials[:username] = gets.chomp
     end
@@ -84,19 +90,31 @@ module ZohoTalker
     end
 
     def ask_for_token
-      token = nil
-      until token
+      loop do
         new_credentials
         params = {
           SCOPE: 'ZohoCRM/crmapi', DISPLAY_NAME: 'Ztos',
           EMAIL_ID: @credentials[:username], PASSWORD: @credentials[:password]
         }
         response = response_from_uri(@interface[:get_token], params)
-        response = response.body.split($RS)[2].split('=')
-        next unless (response & ERROR_RESPONSES).empty?
-        token = response[1]
+        response = parse_token_response(response)
+        next unless zoho_without_errors?(response)
+        return response[1]
       end
-      token
+    end
+
+    def parse_token_response(response)
+      response.body.split($RS)[2].split('=')
+    end
+
+    def zoho_without_errors?(response)
+      unless (response & ERROR_RESPONSES).empty?
+        message = response[1].split('_').map do |word|
+          word.downcase.capitalize
+        end
+        puts 'ERROR: ' + message.join(' ')
+      end
+      true
     end
   end
 end
