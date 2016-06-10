@@ -29,8 +29,10 @@ Gem::Specification.new do |s|
   s.email       = 'davide@petilli.it'
   s.license     = 'MIT'
   s.files       = ['lib/ztos.rb',
-                   'lib/ztos/skebby_file.rb',
+                   'lib/ztos/skebby/skebby_file.rb',
+                   'lib/ztos/zoho/zoho_talker.rb',
                    'lib/ztos/string_utils.rb',
+                   'lib/ztos/ztos_logger.rb',
                    'lib/ztos/ztos_config.rb']
   s.executables << 'ztos'
 end
