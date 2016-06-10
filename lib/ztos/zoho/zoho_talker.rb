@@ -21,28 +21,63 @@
 
 # Module hosting Zoho communication methods
 module ZohoTalker
+  ERROR_RESPONSES = %w(INVALID_PASSWORD
+                       NO_SUCH_USER
+                       EXCEEDED_MAXIMUM_ALLOWED_AUTHTOKENS null).freeze
+
+  @interface = {
+    get_contacts: 'https://crm.zoho.com/crm/private/json/Contacts/getRecords',
+    get_token: 'https://accounts.zoho.com/apiauthtoken/nb/create'
+  }
+
+  # The ZohoCRM API limits max requests to 200,
+  # so we get records 200 at a time
+  @from_index = 1
+  @to_index = 200
+
+  @credentials = { username: nil, password: nil }
+
   class << self
-    ERROR_RESPONSES = %w(INVALID_PASSWORD
-                         NO_SUCH_USER
-                         EXCEEDED_MAXIMUM_ALLOWED_AUTHTOKENS).freeze
-
-    @login = { username: nil, password: nil }
-
     def obtain_new_token
       puts 'Can\'t find a valid ZohoCRM authtoken. Obtaining new one.'
       ask_for_token
     end
 
+    def ask_zoho_for_data(zoho_token)
+      params = {
+        newFormat: 2, authtoken: zoho_token, scope: 'crmapi',
+        fromIndex: @from_index, toIndex: @to_index,
+        selectColumns: 'Contacts(Lead Source,First Name,Last Name,Email,Mobile)'
+      }
+      response = response_from_uri(@interface[:get_contacts], params)
+      increment_indexes if response.is_a?(Net::HTTPSuccess)
+      response = nil unless response.is_a?(Net::HTTPSuccess)
+      response.body
+    end
+
     private
+
+    def response_from_uri(uri, params)
+      p params
+      uri = URI(uri)
+      uri.query = URI.encode_www_form(params)
+      p uri
+      Net::HTTP.get_response(uri)
+    end
+
+    def increment_indexes
+      @from_index += 200
+      @to_index += 200
+    end
 
     def new_username
       print 'Enter ZohoCRM username: '
-      @login[:username] = gets.chomp
+      @credentials[:username] = gets.chomp
     end
 
     def new_password
       print 'Enter ZohoCRM password: '
-      @login[:password] = gets.chomp
+      @credentials[:password] = gets.chomp
     end
 
     def new_credentials
@@ -50,24 +85,18 @@ module ZohoTalker
       new_password
     end
 
-    def generate_uri
-      uri = URI('https://accounts.zoho.com/apiauthtoken/nb/create')
-      params = {
-        SCOPE: 'ZohoCRM/crmapi',
-        EMAIL_ID: @login[:username],
-        PASSWORD: @login[:password],
-        DISPLAY_NAME: 'Ztos'
-      }
-      uri.query = URI.encode_www_form(params)
-      uri
-    end
-
     def ask_for_token
       token = nil
       until token
         new_credentials
-        uri = generate_uri
-        response = Net::HTTP.get_response(uri).body.split($RS)[2].split('=')
+        params = {
+          SCOPE: 'ZohoCRM/crmapi', DISPLAY_NAME: 'Ztos',
+          EMAIL_ID: @credentials[:username], PASSWORD: @credentials[:password]
+        }
+        response = response_from_uri(@interface[:get_token], params)
+        p response.body
+        response = response.body.split($RS)[2].split('=')
+        p response
         next unless (response & ERROR_RESPONSES).empty?
         token = response[1]
       end

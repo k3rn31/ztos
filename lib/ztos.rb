@@ -43,52 +43,34 @@ module Ztos
       @crm_cli = []
       @skebby_files = {}
 
-      retrieve_data_from_zoho
+      retrieve_data
       compose_records
     end
 
-    def retrieve_data_from_zoho
-      # The ZohoCRM API limits max requests to 200,
-      # so we get records 200 at a time
-      from_index = 1
-      to_index = 200
+    private
 
-      uri = URI('https://crm.zoho.com/crm/private/json/Contacts/getRecords')
-
+    def retrieve_data
       @logger.do_with_log 'Getting data from ZohoCRM' do
         loop do
           print '.'
-          params = {
-            newFormat: 2,
-            authtoken: @config.zoho_token,
-            scope: 'crmapi',
-            fromIndex: from_index,
-            toIndex: to_index,
-            selectColumns: 'Contacts(Lead Source,First Name,Last Name,Email,Mobile)'
-          }
-
-          uri.query = URI.encode_www_form(params)
-
-          response = Net::HTTP.get_response(uri)
-
-          if response.is_a?(Net::HTTPSuccess)
-            parsed_json = JSON.parse(response.body, symbolize_names: true)
-            from_index += 200
-            to_index += 200
-          end
-
+          response = ZohoTalker.ask_zoho_for_data(@config.zoho_token)
+          break unless response
+          parsed_json = JSON.parse(response, symbolize_names: true)
           break if parsed_json[:response][:nodata]
-
-          parsed_json[:response][:result][:Contacts][:row].each do |row|
-            h = {}
-            row[:FL].each do |p|
-              key = p[:val].extend(StringUtils)
-              key.tokenify!
-              h[key.to_sym] = p[:content]
-            end
-            @crm_cli << h
-          end
+          populate_crm_cli(parsed_json)
         end
+      end
+    end
+
+    def populate_crm_cli(parsed_json)
+      parsed_json[:response][:result][:Contacts][:row].each do |row|
+        h = {}
+        row[:FL].each do |p|
+          key = p[:val].extend(StringUtils)
+          key.tokenify!
+          h[key.to_sym] = p[:content]
+        end
+        @crm_cli << h
       end
     end
 
