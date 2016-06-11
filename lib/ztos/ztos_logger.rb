@@ -21,16 +21,18 @@
 
 module Ztos
   # Class responsible for adding log messages
-  class Logger
-    def do_with_log(message)
-      print message
-      yield
-      print "\n"
-    end
+  module Logger
+    class << self
+      def do_with_log(message)
+        print message
+        yield
+        print "\n"
+      end
 
-    def do_with_log_in_place(message)
-      print message
-      yield
+      def do_with_log_in_place(message)
+        print message
+        yield
+      end
     end
   end
 end

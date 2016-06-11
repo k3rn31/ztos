@@ -26,10 +26,6 @@ module ZohoTalker
     get_token: 'https://accounts.zoho.com/apiauthtoken/nb/create'
   }
 
-  ERROR_RESPONSES = %w(INVALID_PASSWORD
-                       NO_SUCH_USER
-                       EXCEEDED_MAXIMUM_ALLOWED_AUTHTOKENS).freeze
-
   # The ZohoCRM API limits max requests to 200,
   # so we get records 200 at a time
   @from_index = 1
@@ -48,25 +44,18 @@ module ZohoTalker
       end
     end
 
-    def ask_zoho_for_data(zoho_token)
+    def ask_for_data(zoho_token)
       params = {
         newFormat: 2, authtoken: zoho_token, scope: 'crmapi',
         fromIndex: @from_index, toIndex: @to_index,
         selectColumns: 'Contacts(Lead Source,First Name,Last Name,Email,Mobile)'
       }
-      response = response_from_uri(@interface[:get_contacts], params)
-      response = nil unless response.is_a?(Net::HTTPSuccess)
+      response = Response.new(@interface[:get_contacts], params)
       increment_indexes
       response.body
     end
 
     private
-
-    def response_from_uri(uri, params)
-      uri = URI(uri)
-      uri.query = URI.encode_www_form(params)
-      Net::HTTP.get_response(uri)
-    end
 
     def increment_indexes
       @from_index += 200
@@ -96,24 +85,48 @@ module ZohoTalker
           SCOPE: 'ZohoCRM/crmapi', DISPLAY_NAME: 'Ztos',
           EMAIL_ID: @credentials[:username], PASSWORD: @credentials[:password]
         }
-        response = response_from_uri(@interface[:get_token], params)
-        response = parse_token_response(response)
-        zoho_without_errors?(response) ? response[1] : next
+        response = Response.new(@interface[:get_token], params)
+        response = response.parse_token_response
+        response.without_errors? ? response[1] : next
       end
     end
+  end
 
-    def parse_token_response(response)
-      response.body.split($RS)[2].split('=')
+  # A class that handles and validates the response received from ZohoCRM
+  class Response
+    ERROR_RESPONSES = %w(INVALID_PASSWORD
+                         NO_SUCH_USER
+                         EXCEEDED_MAXIMUM_ALLOWED_AUTHTOKENS).freeze
+
+    def initialize(uri, params)
+      @response = response_from_uri(uri, params)
     end
 
-    def zoho_without_errors?(response)
-      unless (response & ERROR_RESPONSES).empty?
-        message = response[1].split('_').map do |word|
+    def parse_token_response
+      @response.body.split($RS)[2].split('=') if @response
+    end
+
+    def without_errors?
+      unless (@response & ERROR_RESPONSES).empty?
+        message = @response[1].split('_').map do |word|
           word.downcase.capitalize
         end
         puts 'ERROR: ' + message.join(' ')
       end
       true
+    end
+
+    def body
+      @response.body
+    end
+
+    private
+
+    def response_from_uri(uri, params)
+      uri = URI(uri)
+      uri.query = URI.encode_www_form(params)
+      @response = Net::HTTP.get_response(uri)
+      @response.is_a?(Net::HTTPSuccess) ? @response : nil
     end
   end
 end

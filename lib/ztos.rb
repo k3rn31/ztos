@@ -39,9 +39,7 @@ module Ztos
   class Recorder
     def initialize
       @config = Configuration.new
-      @logger = Logger.new
       @crm_cli = []
-      @skebby_files = {}
 
       retrieve_data
       compose_records
@@ -50,10 +48,10 @@ module Ztos
     private
 
     def retrieve_data
-      @logger.do_with_log 'Getting data from ZohoCRM' do
+      Logger.do_with_log 'Getting data from ZohoCRM' do
         loop do
           print '.'
-          response = ZohoTalker.ask_zoho_for_data(@config.zoho_token)
+          response = ZohoTalker.ask_for_data(@config.zoho_token)
           break unless response
           parsed_json = JSON.parse(response, symbolize_names: true)
           break if parsed_json[:response][:nodata]
@@ -64,43 +62,31 @@ module Ztos
 
     def populate_crm_cli(parsed_json)
       parsed_json[:response][:result][:Contacts][:row].each do |row|
-        h = {}
-        row[:FL].each do |p|
-          key = p[:val].extend(StringUtils)
-          key.tokenify!
-          h[key.to_sym] = p[:content]
+        client = {}
+        row[:FL].each do |field|
+          key = field[:val].extend(StringUtils).tokenify.to_sym
+          client[key] = field[:content]
         end
-        @crm_cli << h
+        @crm_cli << client
       end
     end
 
     def compose_records
-      @logger.do_with_log 'Composing records' do
+      Logger.do_with_log 'Composing records' do
         @crm_cli.each do |cli|
+          next if cli[:mobile] == 'null'
           print '.'
           lead = switch_lead(cli)
-          @skebby_files[lead] ||= SkebbyTalker::File.new(lead + '.csv', 'w')
-          @skebby_files[lead].puts "#{cli[:first_name]};#{cli[:last_name]};" \
-            "#{cli[:email]};#{cli[:mobile]}"
+          SkebbyTalker.write_files(lead, cli)
         end
       end
-      close_skebby_files
+      SkebbyTalker.close_files
     end
 
     def switch_lead(cli)
       lead = cli[:lead_source]
       lead.extend(StringUtils)
       lead.tokenify!
-    end
-
-    def close_skebby_files
-      # Closing files
-      @logger.do_with_log "Files generated:\n" do
-        @skebby_files.each do |_k, v|
-          puts "\t" + File.basename(v)
-          v.close
-        end
-      end
     end
   end
 end
